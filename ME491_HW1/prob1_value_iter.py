@@ -71,7 +71,7 @@ def get_optim_policy(D=None, optim_value=None, depart_pos=None, terminal_pos=Non
     # Todo
     D = D.copy()
     D[D==0] = np.iinfo(np.int32).max # distance is inf for nonadjacent cities
-    Q = -D + optim_value # state action value function
+    Q = -D + gamma * optim_value # state action value function
     get_optim_policy = np.argmax(Q, axis=-1)
     return get_optim_policy
 
@@ -81,8 +81,10 @@ def get_optim_path(D=None, optim_value=None, depart_pos=None, terminal_pos=None,
     # Todo
     optim_path.append(depart_pos)
     next_state = depart_pos
+    optim_policy = get_optim_policy(D, optim_value, depart_pos, terminal_pos, gamma)
+    num_nodes = len(D)
     for i in range(num_nodes):
-        next_state = get_optim_policy(D, optim_value, depart_pos, terminal_pos, gamma)[next_state]
+        next_state = optim_policy[next_state]
         optim_path.append(next_state)
         if(next_state == terminal_pos):
             break
@@ -95,11 +97,13 @@ def get_optim_value(D=None, threshold=0.001, gamma=0.9, depart_pos=7, terminal_p
     # Todo
     D = D.copy()
     D[D==0] = np.iinfo(np.int32).max
+    num_nodes = len(D)
     optim_value = np.zeros(num_nodes, np.float) # number of states(default is 19)
     delta = float("inf") # maximum abs(change) in value function among all states
     while(delta > threshold):
         old_optim_value = optim_value
-        optim_value = np.max(-D + gamma * old_optim_value, axis=-1)
+        Q = -D + gamma * optim_value # state action value function
+        optim_value = np.max(Q, axis=-1)
         optim_value[terminal_pos] = 0
         delta = np.max(np.abs(old_optim_value - optim_value))
     return optim_value

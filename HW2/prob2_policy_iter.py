@@ -67,21 +67,75 @@ def print_optim_path(optim_path):
 
 
 def get_optim_policy(D=None, optim_value=None, depart_pos=None, terminal_pos=None, gamma=None):
-    get_optim_policy = []
     # Todo
-    return get_optim_policy
+    D = D.copy()
+    D[D==0] = np.iinfo(np.int32).max
+    num_nodes = len(D)
+    optim_policy = np.zeros(num_nodes, np.int)
+    while(True):
+        old_optim_policy = optim_policy
+        Q = -D + gamma * evaluate_policy(D=D, policy=optim_policy, threshold=0.001, gamma=gamma, terminal_pos=terminal_pos) # state action value function
+        optim_policy = np.argmax(Q, axis=-1)
+        if(np.array_equal(old_optim_policy, optim_policy)): break
+    return optim_policy
 
 
 def get_optim_path(D=None, optim_value=None, depart_pos=None, terminal_pos=None, gamma=None):
-    optim_path = []
     # Todo
+    optim_path = []
+    optim_path.append(depart_pos)
+    next_state = depart_pos
+    optim_policy = get_optim_policy(D, optim_value, depart_pos, terminal_pos, gamma)
+    num_nodes = len(D)
+    for i in range(num_nodes):
+        next_state = optim_policy[next_state]
+        optim_path.append(next_state)
+        if(next_state == terminal_pos):
+            break
+    optim_path = np.asarray(optim_path)
     return optim_path
 
 
 def get_optim_value(D=None, threshold=0.001, gamma=0.9, depart_pos=7, terminal_pos=0):
-    optim_value = []
     # Todo
+    optim_policy = get_optim_policy(D, terminal_pos = terminal_pos, gamma=gamma)
+    optim_value = evaluate_policy(D=D, policy=optim_policy, threshold=threshold, gamma=gamma, terminal_pos=terminal_pos)
     return optim_value
+
+
+def evaluate_policy(D=None, policy=None, threshold=0.001, gamma=0.9, depart_pos=7, terminal_pos=0):
+
+    D = D.copy()
+    D[D==0] = np.iinfo(np.int32).max
+    num_nodes = len(D)
+    value = np.zeros(num_nodes, np.float)
+
+    # ##MC
+    # state = np.arange(num_nodes)
+    # done = np.zeros(num_nodes, np.bool) # initialize with all false
+    # discount = 1
+    # for i in range(num_nodes):
+    #     not_done = np.invert(done)
+    #     adjacent = np.ones(num_nodes, np.bool) # initialize with all true
+    #     adjacent[not_done] = D[state[not_done], policy[state[not_done]]] != np.iinfo(np.int32).max
+    #     not_adjacent = np.invert(adjacent)
+    #     value[not_done] -= discount * D[state[not_done], policy[state[not_done]]]
+    #     value[terminal_pos] = 0
+    #     state[not_done] = policy[state[not_done]]
+    #     done = np.logical_or(done, not_adjacent)
+    #     done = np.logical_or(done, state == terminal_pos)
+    #     discount *= gamma
+    #     if(np.all(done)): break
+
+    #TD(0)
+    delta = float("inf") # maximum abs(change) in value function among all states
+    while(delta > threshold):
+        old_value = value
+        value = -D[np.arange(num_nodes), policy] + gamma * value[policy]
+        value[terminal_pos] = 0
+        delta = np.max(np.abs(old_value - value))
+
+    return value
 
 
 if __name__ == '__main__':

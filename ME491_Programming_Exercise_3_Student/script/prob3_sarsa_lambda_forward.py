@@ -1,5 +1,7 @@
 import numpy as np
 from environment import GridWorld
+import random
+import copy
 
 
 class Agent:
@@ -14,7 +16,15 @@ class Agent:
 
         ################
 
-        # your code
+        # initialize Q, with -inf for impossible action
+        self.q_table = np.zeros(env.size + [len(self.actions)])
+        self.q_table[0, :, 0] = float("-inf")
+        self.q_table[env.size[0] - 1, :, 1] = float("-inf")
+        self.q_table[:, 0, 2] = float("-inf")
+        self.q_table[:, env.size[1] - 1, 3] = float("-inf")
+
+        self.policy = np.zeros(env.size, np.int)
+        self.transition = []
 
         #################
 
@@ -22,7 +32,8 @@ class Agent:
         # reset the agent each episode
         ################
 
-        # your code
+        self.epsilon *= self.discount_factor
+        self.transition = []
 
         #################
 
@@ -30,7 +41,10 @@ class Agent:
         # sample an available action
         ################
 
-        # your code
+        if random.random() < self.epsilon:
+            action = random.choice(env.get_possible_actions(state))
+        else:
+            action = np.argmax(self.q_table[tuple(state)])
 
         #################
         return action
@@ -39,7 +53,7 @@ class Agent:
         # make greedy policy w.r.t. the value function
         ################
 
-        # your code
+        self.policy = np.argmax(self.q_table, axis=-1)
 
         #################
 
@@ -47,7 +61,7 @@ class Agent:
         # store the transition for offline update
         ################
 
-        # your code
+        self.transition.append([state, action, reward, next_state])
 
         #################
 
@@ -55,7 +69,21 @@ class Agent:
         # update the value function
         ################
 
-        # your code
+        transition_length = len(self.transition)
+        advantage = 0
+        advantages = []
+        for step in reversed(range(transition_length)):
+            [state, action, reward, next_state] = self.transition[step]
+            if next_state == env.goal:
+                delta = reward - self.q_table[tuple(state)][action]
+            else:
+                delta = reward + self.discount_factor * self.q_table[tuple(next_state)][self.act(next_state)] - self.q_table[tuple(state)][action]
+            advantage = delta + self.discount_factor * self.lamb * advantage # backward is equivalent to forward in offline
+            advantages.insert(0, advantage)
+
+        for step in range(transition_length):
+            [state, action, reward, next_state] = self.transition[step]
+            self.q_table[tuple(state)][action] += self.learning_rate * advantages[step]
 
         #################
 
@@ -69,11 +97,16 @@ if __name__ == '__main__':
         # uniformly sample the initial state. reject the terminal state
         ################
 
-        # your code
+        while (True):
+            init_state = []
+            for i in env.size:
+                init_state.append(random.randrange(i))
+            if(init_state != env.goal):
+                break
 
         #################
 
-        state = env.reset(init_state)
+        state = env.reset(copy.deepcopy(init_state))
         agent.reset()
         steps = 0
 
@@ -81,7 +114,11 @@ if __name__ == '__main__':
         while True:
             ################
 
-            # your code
+            action = agent.act(state)
+            next_state, reward, done = env.step(action)
+            agent.store_transition(state, action, reward, next_state)
+            state = next_state
+            steps += 1
 
             #################
             if done or steps >= 1000:

@@ -71,20 +71,21 @@ class Agent:
         ################
 
         transition_length = len(self.transition)
-        advantage = 0
-        advantages = []
+
+        returns = np.asarray([])
+        coefficient = np.array([1])
+        next_action = self.act(self.transition[-1][-1])
+        q_table_temp = self.q_table.copy()
+
         for step in reversed(range(transition_length)):
             [state, action, reward, next_state] = self.transition[step]
             if next_state == env.goal:
-                delta = reward - self.q_table[tuple(state)][action]
+                returns = np.array([reward])
             else:
-                delta = reward + self.discount_factor * self.q_table[tuple(next_state)][self.act(next_state)] - self.q_table[tuple(state)][action]
-            advantage = delta + self.discount_factor * self.lamb * advantage # backward is equivalent to forward in offline
-            advantages.insert(0, advantage)
-
-        for step in range(transition_length):
-            [state, action, reward, next_state] = self.transition[step]
-            self.q_table[tuple(state)][action] += self.learning_rate * advantages[step]
+                returns = reward + self.discount_factor * np.concatenate(([q_table_temp[tuple(next_state)][next_action]],returns))
+            next_action = action
+            self.q_table[tuple(state)][action] += self.learning_rate * coefficient.dot(returns-self.q_table[tuple(state)][action])
+            coefficient = np.concatenate(([(1 - self.lamb)], self.lamb*coefficient))
 
         #################
 

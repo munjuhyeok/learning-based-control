@@ -68,7 +68,8 @@ class Agent:
         if next_state == env.goal:
             delta = reward - self.q_table[tuple(state)][action]
         else:
-            delta = reward + self.discount_factor * self.q_table[tuple(next_state)][self.act(next_state)] - self.q_table[tuple(state)][action]
+            self.next_action = self.act(next_state)
+            delta = reward + self.discount_factor * self.q_table[tuple(next_state)][self.next_action] - self.q_table[tuple(state)][action]
 
         advantage = delta
 
@@ -101,12 +102,13 @@ if __name__ == '__main__':
         state = env.reset(init_state)
         agent.reset()
         steps = 0
+        agent.next_action = agent.act(state)
 
         # actual training
         while True:
             ################
 
-            action = agent.act(state)
+            action = agent.next_action
             next_state, reward, done = env.step(action)
             agent.update(state, action, reward, next_state)
             state = next_state

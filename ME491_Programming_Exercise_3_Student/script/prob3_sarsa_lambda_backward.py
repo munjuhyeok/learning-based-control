@@ -31,7 +31,7 @@ class Agent:
         # reset the agent each episode
         ################
 
-        self.epsilon *= self.discount_factor
+        self.epsilon *= 0.99999
         self.transition = []
 
         #################
@@ -60,7 +60,7 @@ class Agent:
         # update the value function
         ################
 
-        self.transition.append(state)
+        self.transition.append([state,action])
         transition_length = len(self.transition)
 
         if next_state == env.goal:
@@ -71,9 +71,9 @@ class Agent:
         advantage = delta
 
         for step in reversed(range(transition_length)):
-            state = self.transition[step]
-            advantage *= self.discount_factor * self.lamb
+            [state, action] = self.transition[step]
             self.q_table[tuple(state)][action] += self.learning_rate * advantage
+            advantage *= self.discount_factor * self.lamb
 
         #################
 

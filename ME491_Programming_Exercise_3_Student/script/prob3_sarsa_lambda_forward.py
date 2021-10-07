@@ -32,7 +32,7 @@ class Agent:
         # reset the agent each episode
         ################
 
-        self.epsilon *= self.discount_factor
+        self.epsilon *= 0.99999
         self.transition = []
 
         #################

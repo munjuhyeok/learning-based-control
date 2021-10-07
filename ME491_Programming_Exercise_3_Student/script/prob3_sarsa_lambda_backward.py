@@ -24,6 +24,8 @@ class Agent:
 
         self.policy = np.zeros(env.size, np.int)
         self.transition = []
+        self.next_action = None
+        epsilon /= 0.99999
 
         #################
 

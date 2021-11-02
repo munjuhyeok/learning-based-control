@@ -41,7 +41,10 @@ class Agent:
         # sample an available action
         ################
 
-        # your code
+        if random.random() < self.epsilon:
+            action = random.choice(env.get_possible_actions(state))
+        else:
+            action = np.argmax(self.q_table[tuple(state)])
 
         #################
         return action
@@ -50,7 +53,7 @@ class Agent:
         # make greedy policy w.r.t. the value function
         ################
 
-        # your code
+        self.policy = np.argmax(self.q_table, axis=-1)
 
         #################
 
@@ -58,7 +61,7 @@ class Agent:
         # store the transition for offline update
         ################
 
-        # your code
+        self.transition.append([state, action, reward, next_state])
 
         #################
 
@@ -66,7 +69,22 @@ class Agent:
         # update the value function
         ################
 
-        # your code
+        transition_length = len(self.transition)
+
+        returns = np.asarray([])
+        coefficient = np.array([1])
+        next_action = self.act(self.transition[-1][-1])
+        q_table_temp = self.q_table.copy()
+
+        for step in reversed(range(transition_length)):
+            [state, action, reward, next_state] = self.transition[step]
+            if next_state == env.goal:
+                returns = np.array([reward])
+            else:
+                returns = reward + self.discount_factor * np.concatenate(([q_table_temp[tuple(next_state)][next_action]],returns))
+            next_action = action
+            self.q_table[tuple(state)][action] += self.learning_rate * coefficient.dot(returns-self.q_table[tuple(state)][action])
+            coefficient = np.concatenate(([(1 - self.lamb)], self.lamb*coefficient))
 
         #################
 
@@ -86,6 +104,7 @@ if __name__ == '__main__':
                 init_state.append(random.randrange(i))
             if(init_state != env.goal):
                 break
+
         #################
 
         state = env.reset(init_state)
@@ -96,7 +115,11 @@ if __name__ == '__main__':
         while True:
             ################
 
-            # your code
+            action = agent.act(state)
+            next_state, reward, done = env.step(action)
+            agent.store_transition(state, action, reward, next_state)
+            state = next_state
+            steps += 1
 
             #################
             if done or steps >= 1000:
